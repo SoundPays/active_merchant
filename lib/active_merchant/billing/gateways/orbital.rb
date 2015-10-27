@@ -572,7 +572,7 @@ module ActiveMerchant #:nodoc:
 
             #  xml.tag! :CCAccountNum, creditcard.number if creditcard
             #  xml.tag! :CCExpireDate, creditcard.expiry_date.expiration.strftime("%m%y") if creditcard
-            end
+            #end
 
             add_managed_billing(xml, parameters) if @options[:customer_profiles]
 
