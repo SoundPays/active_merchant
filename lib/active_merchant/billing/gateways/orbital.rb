@@ -28,15 +28,15 @@ module ActiveMerchant #:nodoc:
     # Company will automatically be affiliated.
 
     class OrbitalGateway < Gateway
-      API_VERSION = "5.6"
+      API_VERSION = "6.4"
 
       POST_HEADERS = {
         "MIME-Version" => "1.1",
-        "Content-Type" => "application/PTI56",
+        "Content-Type" => "application/PTI64",
         "Content-transfer-encoding" => "text",
         "Request-number" => '1',
         "Document-type" => "Request",
-        "Interface-Version" => "Ruby|ActiveMerchant|Proprietary Gateway"
+        "Interface-Version" => "Ruby|ActiveMerchant|SoundPays Gateway"
       }
 
       SUCCESS = '0'
@@ -70,7 +70,7 @@ module ActiveMerchant #:nodoc:
       self.secondary_live_url = "https://orbital2.paymentech.net/authorize"
 
       self.supported_countries = ["US", "CA"]
-      self.default_currency = "CAD"
+      self.default_currency = "USD"
       self.supported_cardtypes = [:visa, :master, :american_express, :discover, :diners_club, :jcb]
 
       self.display_name = 'Orbital Paymentech'
@@ -185,12 +185,23 @@ module ActiveMerchant #:nodoc:
 
       # A – Authorization request
       def authorize(money, creditcard, options = {})
-        order = build_new_order_xml(AUTH_ONLY, money, options) do |xml|
+        order = build_new_order_xml(AUTH_ONLY, money, creditcard, options) do |xml|
           add_creditcard(xml, creditcard, options[:currency])
           add_address(xml, creditcard, options)
           if @options[:customer_profiles]
             add_customer_data(xml, creditcard, options)
-            add_managed_billing(xml, options)
+          end
+        end
+        commit(order, :authorize, options[:trace_number])
+      end
+
+      def authorize_with_profile(money, creditcard, options = {})
+        options.merge!(:customer_profile_action => CREATE)
+        order = build_new_order_xml(AUTH_ONLY, money, creditcard, options) do |xml|
+          add_creditcard(xml, creditcard, options[:currency])
+          add_address(xml, creditcard, options)
+          if @options[:customer_profiles]
+            add_customer_data(xml, creditcard, options)
           end
         end
         commit(order, :authorize, options[:trace_number])
@@ -205,12 +216,23 @@ module ActiveMerchant #:nodoc:
 
       # AC – Authorization and Capture
       def purchase(money, creditcard, options = {})
-        order = build_new_order_xml(AUTH_AND_CAPTURE, money, options) do |xml|
+        order = build_new_order_xml(AUTH_AND_CAPTURE, money, creditcard, options) do |xml|
           add_creditcard(xml, creditcard, options[:currency])
           add_address(xml, creditcard, options)
           if @options[:customer_profiles]
             add_customer_data(xml, creditcard, options)
-            add_managed_billing(xml, options)
+          end
+        end
+        commit(order, :purchase, options[:trace_number])
+      end
+
+      def purchase_with_profile(money, creditcard, options = {})
+        options.merge!(:customer_profile_action => CREATE)
+        order = build_new_order_xml(AUTH_AND_CAPTURE, money, creditcard, options) do |xml|
+          add_creditcard(xml, creditcard, options[:currency])
+          add_address(xml, creditcard, options)
+          if @options[:customer_profiles]
+            add_customer_data(xml, creditcard, options)
           end
         end
         commit(order, :purchase, options[:trace_number])
@@ -223,7 +245,7 @@ module ActiveMerchant #:nodoc:
 
       # R – Refund request
       def refund(money, authorization, options = {})
-        order = build_new_order_xml(REFUND, money, options.merge(:authorization => authorization)) do |xml|
+        order = build_new_order_xml(REFUND, money, nil, options.merge(:authorization => authorization)) do |xml|
           add_refund(xml, options[:currency])
           xml.tag! :CustomerRefNum, options[:customer_ref_num] if @options[:customer_profiles] && options[:profile_txn]
         end
@@ -414,8 +436,6 @@ module ActiveMerchant #:nodoc:
 
       def add_managed_billing(xml, options)
         if mb = options[:managed_billing]
-          ActiveMerchant.deprecated RECURRING_DEPRECATION_MESSAGE
-
           # default to recurring (R).  Other option is deferred (D).
           xml.tag! :MBType, mb[:type] || RECURRING
           # default to Customer Reference Number
@@ -508,7 +528,7 @@ module ActiveMerchant #:nodoc:
         @options[:ip_authentication] == true
       end
 
-      def build_new_order_xml(action, money, parameters = {})
+      def build_new_order_xml(action, money, creditcard = nil, parameters = {})
         requires!(parameters, :order_id)
         xml = xml_envelope
         xml.tag! :Request do
@@ -529,11 +549,11 @@ module ActiveMerchant #:nodoc:
             xml.tag! :MessageType, action
             add_bin_merchant_and_terminal(xml, parameters)
 
-            yield xml if block_given?
-
             xml.tag! :OrderID, format_order_id(parameters[:order_id])
             xml.tag! :Amount, amount(money)
             xml.tag! :Comments, parameters[:comments] if parameters[:comments]
+
+            yield xml if block_given?
 
             # CustomerAni, AVSPhoneType and AVSDestPhoneType could be added here.
 
@@ -543,12 +563,26 @@ module ActiveMerchant #:nodoc:
 
             set_recurring_ind(xml, parameters)
 
+            xml.tag! :OrderDefaultDescription, parameters[:order_default_description][0..63] if parameters[:order_default_description]
+            xml.tag! :OrderDefaultAmount, parameters[:order_default_amount] if parameters[:order_default_amount]
+
+            if [CREATE, UPDATE].include? parameters[:customer_profile_action]
+              xml.tag! :CustomerAccountType, 'CC' # Only credit card supported
+              xml.tag! :Status, parameters[:status] || ACTIVE # Active
+
+              xml.tag! :CCAccountNum, creditcard.number if creditcard
+              xml.tag! :CCExpireDate, creditcard.expiry_date.expiration.strftime("%m%y") if creditcard
+            end
+
+            add_managed_billing(xml, parameters) if @options[:customer_profiles]
+
             # Append Transaction Reference Number at the end for Refund transactions
             if action == REFUND
               tx_ref_num, _ = split_authorization(parameters[:authorization])
               xml.tag! :TxRefNum, tx_ref_num
             end
           end
+
         end
         xml.target!
       end
@@ -670,6 +704,13 @@ module ActiveMerchant #:nodoc:
       def build_customer_request_xml(creditcard, options = {})
         xml = xml_envelope
         xml.tag! :Request do
+          build_customer_profile_xml(xml, creditcard, options)
+        end
+        xml.target!
+      end
+
+      def build_customer_profile_xml(xml, creditcard, options = {})
+        if options[:customer_profile_action]
           xml.tag! :Profile do
             xml.tag! :OrbitalConnectionUsername, @options[:login] unless ip_authentication?
             xml.tag! :OrbitalConnectionPassword, @options[:password] unless ip_authentication?
@@ -710,7 +751,6 @@ module ActiveMerchant #:nodoc:
             add_managed_billing(xml, options)
           end
         end
-        xml.target!
       end
 
       # Unfortunately, Orbital uses their own special codes for AVS responses
