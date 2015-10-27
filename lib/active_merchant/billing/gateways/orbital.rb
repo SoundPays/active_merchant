@@ -551,16 +551,6 @@ module ActiveMerchant #:nodoc:
 
             yield xml if block_given?
 
-            xml.tag! :OrderID, format_order_id(parameters[:order_id])
-            xml.tag! :Amount, amount(money)
-            xml.tag! :Comments, parameters[:comments] if parameters[:comments]
-
-            # CustomerAni, AVSPhoneType and AVSDestPhoneType could be added here.
-
-            if parameters[:soft_descriptors].is_a?(OrbitalSoftDescriptors)
-              add_soft_descriptors(xml, parameters[:soft_descriptors])
-            end
-
             set_recurring_ind(xml, parameters)
 
             xml.tag! :OrderDefaultDescription, parameters[:order_default_description][0..63] if parameters[:order_default_description]
@@ -581,8 +571,18 @@ module ActiveMerchant #:nodoc:
               tx_ref_num, _ = split_authorization(parameters[:authorization])
               xml.tag! :TxRefNum, tx_ref_num
             end
-          end
 
+
+            xml.tag! :OrderID, format_order_id(parameters[:order_id])
+            xml.tag! :Amount, amount(money)
+            xml.tag! :Comments, parameters[:comments] if parameters[:comments]
+
+            # CustomerAni, AVSPhoneType and AVSDestPhoneType could be added here.
+
+            if parameters[:soft_descriptors].is_a?(OrbitalSoftDescriptors)
+              add_soft_descriptors(xml, parameters[:soft_descriptors])
+            end
+          end
         end
         xml.target!
       end
