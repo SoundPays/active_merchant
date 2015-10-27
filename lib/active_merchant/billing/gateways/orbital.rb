@@ -566,12 +566,12 @@ module ActiveMerchant #:nodoc:
             xml.tag! :OrderDefaultDescription, parameters[:order_default_description][0..63] if parameters[:order_default_description]
             xml.tag! :OrderDefaultAmount, parameters[:order_default_amount] if parameters[:order_default_amount]
 
-            if [CREATE, UPDATE].include? parameters[:customer_profile_action]
-              xml.tag! :CustomerAccountType, 'CC' # Only credit card supported
-              xml.tag! :Status, parameters[:status] || ACTIVE # Active
+            #if [CREATE, UPDATE].include? parameters[:customer_profile_action]
+            #  xml.tag! :CustomerAccountType, 'CC' # Only credit card supported
+            #  xml.tag! :Status, parameters[:status] || ACTIVE # Active
 
-              xml.tag! :CCAccountNum, creditcard.number if creditcard
-              xml.tag! :CCExpireDate, creditcard.expiry_date.expiration.strftime("%m%y") if creditcard
+            #  xml.tag! :CCAccountNum, creditcard.number if creditcard
+            #  xml.tag! :CCExpireDate, creditcard.expiry_date.expiration.strftime("%m%y") if creditcard
             end
 
             add_managed_billing(xml, parameters) if @options[:customer_profiles]
