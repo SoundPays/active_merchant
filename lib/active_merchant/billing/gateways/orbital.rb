@@ -551,28 +551,6 @@ module ActiveMerchant #:nodoc:
 
             yield xml if block_given?
 
-            set_recurring_ind(xml, parameters)
-
-            xml.tag! :OrderDefaultDescription, parameters[:order_default_description][0..63] if parameters[:order_default_description]
-            xml.tag! :OrderDefaultAmount, parameters[:order_default_amount] if parameters[:order_default_amount]
-
-            #if [CREATE, UPDATE].include? parameters[:customer_profile_action]
-            #  xml.tag! :CustomerAccountType, 'CC' # Only credit card supported
-            #  xml.tag! :Status, parameters[:status] || ACTIVE # Active
-
-            #  xml.tag! :CCAccountNum, creditcard.number if creditcard
-            #  xml.tag! :CCExpireDate, creditcard.expiry_date.expiration.strftime("%m%y") if creditcard
-            #end
-
-            add_managed_billing(xml, parameters) if @options[:customer_profiles]
-
-            # Append Transaction Reference Number at the end for Refund transactions
-            if action == REFUND
-              tx_ref_num, _ = split_authorization(parameters[:authorization])
-              xml.tag! :TxRefNum, tx_ref_num
-            end
-
-
             xml.tag! :OrderID, format_order_id(parameters[:order_id])
             xml.tag! :Amount, amount(money)
             xml.tag! :Comments, parameters[:comments] if parameters[:comments]
@@ -582,7 +560,17 @@ module ActiveMerchant #:nodoc:
             if parameters[:soft_descriptors].is_a?(OrbitalSoftDescriptors)
               add_soft_descriptors(xml, parameters[:soft_descriptors])
             end
+
+            set_recurring_ind(xml, parameters)
+            add_managed_billing(xml, parameters) if @options[:customer_profiles]
+
+            # Append Transaction Reference Number at the end for Refund transactions
+            if action == REFUND
+              tx_ref_num, _ = split_authorization(parameters[:authorization])
+              xml.tag! :TxRefNum, tx_ref_num
+            end
           end
+
         end
         xml.target!
       end
