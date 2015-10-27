@@ -549,11 +549,11 @@ module ActiveMerchant #:nodoc:
             xml.tag! :MessageType, action
             add_bin_merchant_and_terminal(xml, parameters)
 
+            yield xml if block_given?
+
             xml.tag! :OrderID, format_order_id(parameters[:order_id])
             xml.tag! :Amount, amount(money)
             xml.tag! :Comments, parameters[:comments] if parameters[:comments]
-
-            yield xml if block_given?
 
             # CustomerAni, AVSPhoneType and AVSDestPhoneType could be added here.
 
