@@ -207,6 +207,15 @@ module ActiveMerchant #:nodoc:
         commit(order, :authorize, options[:trace_number])
       end
 
+      # A – Authorization request
+      def force(money, creditcard, options = {})
+        order = build_new_order_xml(FORCE_AUTH_AND_CAPTURE, money, creditcard, options) do |xml|
+          add_creditcard(xml, creditcard, options[:currency])
+          add_address(xml, creditcard, options)
+        end
+        commit(order, :authorize, options[:trace_number])
+      end
+
       def verify(creditcard, options = {})
         MultiResponse.run(:use_first_response) do |r|
           r.process { authorize(100, creditcard, options) }
@@ -551,6 +560,7 @@ module ActiveMerchant #:nodoc:
 
             yield xml if block_given?
 
+            xml.tag! :PriorAuthID, parameters[:auth_code] if parameters[:auth_code]
             xml.tag! :OrderID, format_order_id(parameters[:order_id])
             xml.tag! :Amount, amount(money)
             xml.tag! :Comments, parameters[:comments] if parameters[:comments]
