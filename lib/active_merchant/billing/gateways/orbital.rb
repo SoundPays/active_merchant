@@ -210,7 +210,7 @@ module ActiveMerchant #:nodoc:
       # A – Authorization request
       def force(money, creditcard, options = {})
         order = build_new_order_xml(FORCE_AUTH_AND_CAPTURE, money, creditcard, options) do |xml|
-          add_creditcard(xml, creditcard, options[:currency])
+          add_creditcard(xml, creditcard, options[:currency], false)
           add_address(xml, creditcard, options)
         end
         commit(order, :authorize, options[:trace_number])
@@ -410,7 +410,7 @@ module ActiveMerchant #:nodoc:
         end
       end
 
-      def add_creditcard(xml, creditcard, currency=nil)
+      def add_creditcard(xml, creditcard, currency=nil, cvv=true)
         unless creditcard.nil?
           xml.tag! :AccountNum, creditcard.number
           xml.tag! :Exp, expiry_date(creditcard)
@@ -429,10 +429,10 @@ module ActiveMerchant #:nodoc:
         #   Do not submit the attribute at all.
         # - http://download.chasepaymentech.com/docs/orbital/orbital_gateway_xml_specification.pdf
         unless creditcard.nil?
-          if %w( visa discover ).include?(creditcard.brand)
+          if %w( visa discover ).include?(creditcard.brand) && cvv
             xml.tag! :CardSecValInd, (creditcard.verification_value? ? '1' : '9')
           end
-          xml.tag! :CardSecVal,  creditcard.verification_value if creditcard.verification_value?
+          xml.tag! :CardSecVal,  creditcard.verification_value if creditcard.verification_value? && cvv
         end
       end
 
