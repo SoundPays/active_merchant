@@ -263,7 +263,7 @@ module ActiveMerchant #:nodoc:
 
       def refund_card(money, card, options = {})
         order = build_new_order_xml(REFUND, money, card, options) do |xml|
-          add_creditcard(xml, card, options[:currency])
+          add_creditcard(xml, card, options[:currency], false)
           add_refund_with_card(xml, options[:currency])
           xml.tag! :CustomerRefNum, options[:customer_ref_num] if @options[:customer_profiles] && options[:profile_txn]
         end
