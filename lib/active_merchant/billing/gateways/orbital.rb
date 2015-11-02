@@ -261,6 +261,14 @@ module ActiveMerchant #:nodoc:
         commit(order, :refund, options[:trace_number])
       end
 
+      def refund_card(money, card, options = {})
+        order = build_new_order_xml(REFUND, money, card, options) do |xml|
+          add_refund(xml, options[:currency])
+          xml.tag! :CustomerRefNum, options[:customer_ref_num] if @options[:customer_profiles] && options[:profile_txn]
+        end
+        commit(order, :refund, options[:trace_number])
+      end
+
       def credit(money, authorization, options= {})
         ActiveMerchant.deprecated CREDIT_DEPRECATION_MESSAGE
         refund(money, authorization, options)
