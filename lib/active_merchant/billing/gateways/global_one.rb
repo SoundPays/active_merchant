@@ -59,7 +59,7 @@ module ActiveMerchant #:nodoc:
       ]
 
       self.test_url = "https://testpayments.globalone.me/merchant/xmlpayment"
-      self.live_url = "https://testpayments.globalone.me/merchant/xmlpayment"
+      self.live_url = "https://payments.globalone.me/merchant/xmlpayment"
 
       self.supported_countries = ["US", "CA"]
       self.default_currency = "CAD"
