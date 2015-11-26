@@ -278,7 +278,6 @@ module ActiveMerchant #:nodoc:
           hash = Digest::MD5.hexdigest(hash_string)
           add_profile_creditcard(xml, creditcard, hash)
         end
-        puts order
         commit(order, :authorize)
       end
 
@@ -299,7 +298,6 @@ module ActiveMerchant #:nodoc:
           hash = Digest::MD5.hexdigest(hash_string)
           add_profile_creditcard(xml, creditcard, hash)
         end
-        puts order
         commit(order, :authorize)
       end
 
@@ -318,7 +316,6 @@ module ActiveMerchant #:nodoc:
           hash = Digest::MD5.hexdigest(hash_string)
           add_hash(xml, hash)
         end
-        puts order
         commit(order, :authorize)
       end
 
