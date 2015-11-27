@@ -26,7 +26,7 @@ module ActiveMerchant #:nodoc:
       SUCCESS = '0'
       APPROVED = "A"
 
-      ECOMMERCE_TERMINAL_TYPE = 1
+      ECOMMERCE_TERMINAL_TYPE = 2
       ECOMMERCE_TRANSACTION_TYPE = 7
 
       RESPONSE_CODES = [
